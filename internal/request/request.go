@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"strconv"
 	"strings"
+
+	"github.com/Jud1k/web_server/internal/headers"
 )
 
 const bufferSize = 8
@@ -13,11 +16,15 @@ type parseState int
 
 const (
 	stateInit parseState = iota
+	stateParsingHeaders
+	stateParsingBody
 	stateDone
 )
 
 type Request struct{
 	RequestLine RequestLine
+	Headers headers.Headers
+	Body []byte
 	State parseState
 }
 
@@ -28,6 +35,21 @@ type RequestLine struct{
 }
 
 func (r *Request)parse(data []byte)(int,error){
+	totalBytesParsed := 0
+	for r.State!=stateDone{
+		n,err:=r.parseSingle(data[totalBytesParsed:])
+		if err!=nil{
+			return totalBytesParsed,err
+		}
+		if n==0{
+			break
+		}
+		totalBytesParsed+=n
+	}
+	return totalBytesParsed,nil
+}
+
+func (r *Request)parseSingle(data []byte)(int,error){
 	switch r.State {
 	case stateInit:
 		n,rl,err:=parseRequestLine(data)
@@ -38,8 +60,38 @@ func (r *Request)parse(data []byte)(int,error){
 			return 0,nil
 		}
 		r.RequestLine=*rl
-		r.State=stateDone
+		r.State=stateParsingHeaders
 		return n,nil
+	case stateParsingHeaders:
+		n,done,err := r.Headers.Parse(data)
+		if err!=nil{
+			return 0,err
+		}
+		if n==0{
+			return 0,nil
+		}
+		if done{
+			r.State=stateParsingBody
+		}
+		return n,nil
+	case stateParsingBody:
+		contentLen:= r.Headers.Get("Content-Length")
+		if contentLen==""{
+			r.State=stateDone
+			return len(data),nil
+		}
+		contentLenInt,err := strconv.Atoi(contentLen)
+		if err!=nil{
+			return 0,errors.New("error: Invalid Content-Legth value")
+		}
+		r.Body=append(r.Body,data...)
+		if len(r.Body)>contentLenInt{
+			return 0,errors.New("error: Length of data bigger then Content-Length")
+		}
+		if len(r.Body)==contentLenInt{
+			r.State=stateDone
+		}
+		return len(data),nil
 	case stateDone:
 		return 0,nil
 	default: 
@@ -50,7 +102,7 @@ func (r *Request)parse(data []byte)(int,error){
 func RequestFromReader(reader io.Reader)(*Request, error){
 	readToIndex := 0
 	buffer := make([]byte,bufferSize)
-	r := &Request{State: stateInit}
+	r := &Request{State: stateInit,Headers: headers.Headers{}}
 	for r.State!=stateDone{
 		if readToIndex==len(buffer){
 			doubleBuf(&buffer)
@@ -64,9 +116,6 @@ func RequestFromReader(reader io.Reader)(*Request, error){
 			return nil,err
 		}
 		readToIndex+=numBytesRead
-		// if readToIndex>=len(buffer){
-		// 	doubleBuf(&buffer)
-		// }
 		numBytesParsed,err:=r.parse(buffer[:readToIndex])
 		if err!=nil{
 			return nil,err

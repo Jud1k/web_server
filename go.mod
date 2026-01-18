@@ -1,8 +1,6 @@
-module idk
+module github.com/Jud1k/web_server
 
 go 1.25.5
-
-replace example.com/request => ./internal/request/request.go
 
 require github.com/stretchr/testify v1.11.1
 

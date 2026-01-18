@@ -3,8 +3,8 @@ package request_test
 import (
 	"io"
 	"testing"
-	"request"
-
+	
+	"github.com/Jud1k/web_server/internal/request"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -105,5 +105,120 @@ func TestGetRequestLineWrongVersionError(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestHeadersSuccess(t *testing.T){
+	reader := &chunkReader{
+		data:            "GET / HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
+		numBytesPerRead: 3,
+	}
+	r, err := request.RequestFromReader(reader)
+	require.NoError(t, err)
+	require.NotNil(t, r)
+	assert.Equal(t, "localhost:42069", r.Headers["host"])
+	assert.Equal(t, "curl/7.81.0", r.Headers["user-agent"])
+	assert.Equal(t, "*/*", r.Headers["accept"])
+}
 
+func TestIvalidHeader(t *testing.T){
+	reader := &chunkReader{
+		data:            "GET / HTTP/1.1\r\nHost localhost:42069\r\n\r\n",
+		numBytesPerRead: 3,
+	}
+	_, err := request.RequestFromReader(reader)
+	require.Error(t, err)
+}
 
+func TestEmptyHeaders(t *testing.T) {
+	reader := &chunkReader{
+		data:            "GET / HTTP/1.1\r\n\r\n",
+		numBytesPerRead: 3,
+	}
+	_, err := request.RequestFromReader(reader)
+	require.NoError(t,err)
+}
+
+func TestMissingEndHeaders(t *testing.T) {
+	reader := &chunkReader{
+		data:            "GET / HTTP/1.1\r\nHost localhost:42069\r\n",
+		numBytesPerRead: 3,
+	}
+	_, err := request.RequestFromReader(reader)
+	require.Error(t, err)
+}
+
+func TestDuplicateHeadersSuccess(t *testing.T){
+	reader := &chunkReader{
+		data:            "GET / HTTP/1.1\r\nHost: localhost:42069\r\nHost: localhost:12345\r\n\r\n",
+		numBytesPerRead: 3,
+	}
+	r, err := request.RequestFromReader(reader)
+	require.NoError(t, err)
+	require.NotNil(t, r)
+	assert.Equal(t, "localhost:42069, localhost:12345", r.Headers["host"])
+}
+
+func TestBodySuccess(t *testing.T) {
+	reader := &chunkReader{
+	data: "POST /submit HTTP/1.1\r\n" +
+		"Host: localhost:42069\r\n" +
+		"Content-Length: 13\r\n" +
+		"\r\n" +
+		"hello world!\n",
+	numBytesPerRead: 3,
+	}
+	r, err := request.RequestFromReader(reader)
+	require.NoError(t, err)
+	require.NotNil(t, r)
+	assert.Equal(t, "hello world!\n", string(r.Body))
+}
+
+// func TestWrongContentLen(t *testing.T) {
+// 	reader := &chunkReader{
+// 	data: "POST /submit HTTP/1.1\r\n" +
+// 		"Host: localhost:42069\r\n" +
+// 		"Content-Length: 20\r\n" +
+// 		"\r\n" +
+// 		"partial content",
+// 	numBytesPerRead: 3,
+// 	}
+// 	_, err := request.RequestFromReader(reader)
+// 	require.Error(t, err)
+// }
+
+func TestEmptyBodySuccess(t *testing.T) {
+	reader := &chunkReader{
+	data: "POST /submit HTTP/1.1\r\n" +
+		"Host: localhost:42069\r\n" +
+		"\r\n",
+	numBytesPerRead: 3,
+	}
+	r,err := request.RequestFromReader(reader)
+	require.NoError(t,err)
+	require.NotNil(t,r)
+	assert.Equal(t,[]byte(nil),r.Body)
+}
+
+// func TestEmptyBodyWithContentLen(t *testing.T) {
+// 	reader := &chunkReader{
+// 	data: "POST /submit HTTP/1.1\r\n" +
+// 		"Host: localhost:42069\r\n" +
+// 		"Content-Length: 20\r\n" +
+// 		"\r\n", 
+// 	numBytesPerRead: 3,
+// 	}
+// 	_, err := request.RequestFromReader(reader)
+// 	require.Error(t, err)
+// }
+
+func TestNoContentLenWithBody(t *testing.T) {
+	reader := &chunkReader{
+	data: "POST /submit HTTP/1.1\r\n" +
+		"Host: localhost:42069\r\n" +
+		"\r\n"+ 
+		"some body",
+		numBytesPerRead: 3,
+	}
+	r, err := request.RequestFromReader(reader)
+	require.NoError(t,err)
+	require.NotNil(t,r)
+	assert.Equal(t,[]byte(nil),r.Body)
+}
