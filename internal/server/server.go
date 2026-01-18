@@ -24,9 +24,9 @@ type HandlerError struct {
 	message    string
 }
 
-func (e *HandlerError)Write(w io.Writer)error{
-	_,err:=fmt.Fprint(w,e)
-	if err!=nil{
+func (e *HandlerError) Write(w io.Writer) error {
+	_, err := fmt.Fprint(w, e)
+	if err != nil {
 		return err
 	}
 	return nil
@@ -54,7 +54,7 @@ func (s *Server) listen() {
 			return
 		}
 		if err != nil {
-			if s.closed.Load(){
+			if s.closed.Load() {
 				return
 			}
 			log.Printf("Error accepting connection: %v", err)
@@ -66,16 +66,15 @@ func (s *Server) listen() {
 
 func (s *Server) handle(conn net.Conn) {
 	defer conn.Close()
-	req,err := request.RequestFromReader(conn)
-	if err!=nil{
+	req, err := request.RequestFromReader(conn)
+	if err != nil {
 		hErr := &HandlerError{
 			statusCode: response.StatusCodeBadRequest,
-			message: err.Error(),
+			message:    err.Error(),
 		}
 		hErr.Write(conn)
 	}
 	writer := response.NewWriter()
-	s.handler(writer,req)
+	s.handler(writer, req)
 	writer.WriteTo(conn)
 }
-

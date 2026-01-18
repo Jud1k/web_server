@@ -3,12 +3,11 @@ package request_test
 import (
 	"io"
 	"testing"
-	
+
 	"github.com/Jud1k/web_server/internal/request"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
 
 type chunkReader struct {
 	data            string
@@ -30,7 +29,7 @@ func (cr *chunkReader) Read(p []byte) (n int, err error) {
 	return n, nil
 }
 
-func TestRequestLine_AllValidMethod(t *testing.T){
+func TestRequestLine_AllValidMethod(t *testing.T) {
 	methods := []string{
 		"GET",
 		"POST",
@@ -43,19 +42,19 @@ func TestRequestLine_AllValidMethod(t *testing.T){
 		"CONNECT",
 	}
 
-	for _,method := range(methods){
-		t.Run(method,func(t *testing.T) {
-				reader := &chunkReader{
-			data: method + " / HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
-			numBytesPerRead: 3,
+	for _, method := range methods {
+		t.Run(method, func(t *testing.T) {
+			reader := &chunkReader{
+				data:            method + " / HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
+				numBytesPerRead: 3,
 			}
-			r,err := request.RequestFromReader(reader)
-			
-			require.NoError(t,err)
-			require.NotNil(t,r)
-			assert.Equal(t,method,r.RequestLine.Method)
+			r, err := request.RequestFromReader(reader)
+
+			require.NoError(t, err)
+			require.NotNil(t, r)
+			assert.Equal(t, method, r.RequestLine.Method)
 		})
-		 
+
 	}
 }
 
@@ -70,8 +69,8 @@ func TestRequestLine_InvalidMethods(t *testing.T) {
 	for _, method := range methods {
 		t.Run(method, func(t *testing.T) {
 			reader := &chunkReader{
-			data:  method + " / HTTP/1.1\r\nHost: localhost\r\n\r\n",
-			numBytesPerRead: 3,
+				data:            method + " / HTTP/1.1\r\nHost: localhost\r\n\r\n",
+				numBytesPerRead: 3,
 			}
 			_, err := request.RequestFromReader(reader)
 			require.Error(t, err)
@@ -79,9 +78,8 @@ func TestRequestLine_InvalidMethods(t *testing.T) {
 	}
 }
 
-
-func TestGetRequestLineWithPath(t *testing.T){
-	reader := &chunkReader{data: "GET /coffee HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",numBytesPerRead: 3}
+func TestGetRequestLineWithPath(t *testing.T) {
+	reader := &chunkReader{data: "GET /coffee HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n", numBytesPerRead: 3}
 	r, err := request.RequestFromReader(reader)
 	require.NoError(t, err)
 	require.NotNil(t, r)
@@ -92,20 +90,20 @@ func TestGetRequestLineWithPath(t *testing.T){
 }
 
 func TestGetRequestLineWrongMethodError(t *testing.T) {
-	reader := &chunkReader{data: "/coffee HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",numBytesPerRead: 3}
+	reader := &chunkReader{data: "/coffee HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n", numBytesPerRead: 3}
 
 	_, err := request.RequestFromReader(reader)
 	require.Error(t, err)
 }
 
 func TestGetRequestLineWrongVersionError(t *testing.T) {
-	reader := &chunkReader{data: "GET /coffee HTTP/2.0\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",numBytesPerRead: 3}
+	reader := &chunkReader{data: "GET /coffee HTTP/2.0\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n", numBytesPerRead: 3}
 
 	_, err := request.RequestFromReader(reader)
 	require.Error(t, err)
 }
 
-func TestHeadersSuccess(t *testing.T){
+func TestHeadersSuccess(t *testing.T) {
 	reader := &chunkReader{
 		data:            "GET / HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
 		numBytesPerRead: 3,
@@ -118,7 +116,7 @@ func TestHeadersSuccess(t *testing.T){
 	assert.Equal(t, "*/*", r.Headers["accept"])
 }
 
-func TestIvalidHeader(t *testing.T){
+func TestIvalidHeader(t *testing.T) {
 	reader := &chunkReader{
 		data:            "GET / HTTP/1.1\r\nHost localhost:42069\r\n\r\n",
 		numBytesPerRead: 3,
@@ -133,7 +131,7 @@ func TestEmptyHeaders(t *testing.T) {
 		numBytesPerRead: 3,
 	}
 	_, err := request.RequestFromReader(reader)
-	require.NoError(t,err)
+	require.NoError(t, err)
 }
 
 func TestMissingEndHeaders(t *testing.T) {
@@ -145,7 +143,7 @@ func TestMissingEndHeaders(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestDuplicateHeadersSuccess(t *testing.T){
+func TestDuplicateHeadersSuccess(t *testing.T) {
 	reader := &chunkReader{
 		data:            "GET / HTTP/1.1\r\nHost: localhost:42069\r\nHost: localhost:12345\r\n\r\n",
 		numBytesPerRead: 3,
@@ -158,12 +156,12 @@ func TestDuplicateHeadersSuccess(t *testing.T){
 
 func TestBodySuccess(t *testing.T) {
 	reader := &chunkReader{
-	data: "POST /submit HTTP/1.1\r\n" +
-		"Host: localhost:42069\r\n" +
-		"Content-Length: 13\r\n" +
-		"\r\n" +
-		"hello world!\n",
-	numBytesPerRead: 3,
+		data: "POST /submit HTTP/1.1\r\n" +
+			"Host: localhost:42069\r\n" +
+			"Content-Length: 13\r\n" +
+			"\r\n" +
+			"hello world!\n",
+		numBytesPerRead: 3,
 	}
 	r, err := request.RequestFromReader(reader)
 	require.NoError(t, err)
@@ -186,15 +184,15 @@ func TestBodySuccess(t *testing.T) {
 
 func TestEmptyBodySuccess(t *testing.T) {
 	reader := &chunkReader{
-	data: "POST /submit HTTP/1.1\r\n" +
-		"Host: localhost:42069\r\n" +
-		"\r\n",
-	numBytesPerRead: 3,
+		data: "POST /submit HTTP/1.1\r\n" +
+			"Host: localhost:42069\r\n" +
+			"\r\n",
+		numBytesPerRead: 3,
 	}
-	r,err := request.RequestFromReader(reader)
-	require.NoError(t,err)
-	require.NotNil(t,r)
-	assert.Equal(t,[]byte(nil),r.Body)
+	r, err := request.RequestFromReader(reader)
+	require.NoError(t, err)
+	require.NotNil(t, r)
+	assert.Equal(t, []byte(nil), r.Body)
 }
 
 // func TestEmptyBodyWithContentLen(t *testing.T) {
@@ -202,7 +200,7 @@ func TestEmptyBodySuccess(t *testing.T) {
 // 	data: "POST /submit HTTP/1.1\r\n" +
 // 		"Host: localhost:42069\r\n" +
 // 		"Content-Length: 20\r\n" +
-// 		"\r\n", 
+// 		"\r\n",
 // 	numBytesPerRead: 3,
 // 	}
 // 	_, err := request.RequestFromReader(reader)
@@ -211,14 +209,14 @@ func TestEmptyBodySuccess(t *testing.T) {
 
 func TestNoContentLenWithBody(t *testing.T) {
 	reader := &chunkReader{
-	data: "POST /submit HTTP/1.1\r\n" +
-		"Host: localhost:42069\r\n" +
-		"\r\n"+ 
-		"some body",
+		data: "POST /submit HTTP/1.1\r\n" +
+			"Host: localhost:42069\r\n" +
+			"\r\n" +
+			"some body",
 		numBytesPerRead: 3,
 	}
 	r, err := request.RequestFromReader(reader)
-	require.NoError(t,err)
-	require.NotNil(t,r)
-	assert.Equal(t,[]byte(nil),r.Body)
+	require.NoError(t, err)
+	require.NotNil(t, r)
+	assert.Equal(t, []byte(nil), r.Body)
 }

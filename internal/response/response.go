@@ -79,28 +79,28 @@ func (w *Writer) WriteBody(p []byte) (int, error) {
 	return n, nil
 }
 
-func (w *Writer) WriteChunkedBody(p []byte)(int,error) {
-	if w.state!=stateHeadersWritten{
-		return 0,fmt.Errorf("error: cannot write body already in state %d", w.state)
+func (w *Writer) WriteChunkedBody(p []byte) (int, error) {
+	if w.state != stateHeadersWritten {
+		return 0, fmt.Errorf("error: cannot write body already in state %d", w.state)
 	}
-	hexLen:=strconv.FormatInt(int64(len(p)),16)
-	chunk := []byte(hexLen+"\r\n")
+	hexLen := strconv.FormatInt(int64(len(p)), 16)
+	chunk := []byte(hexLen + "\r\n")
 	chunk = append(chunk, p...)
 	chunk = append(chunk, []byte("\r\n")...)
 	return w.buff.Write(chunk)
 }
 
-func (w *Writer) WriteChunkedBodyDone()(int,error) {
-	w.state=stateBodyWritten
+func (w *Writer) WriteChunkedBodyDone() (int, error) {
+	w.state = stateBodyWritten
 	return w.buff.Write([]byte("0\r\n\r\n"))
 }
 
-func (w *Writer) WriteTrailers(h headers.Headers)error  {
-	if w.state!=stateBodyWritten{
+func (w *Writer) WriteTrailers(h headers.Headers) error {
+	if w.state != stateBodyWritten {
 		return fmt.Errorf("error: cannot write trailers already in state %d", w.state)
 	}
-	maps.Copy(w.headers,h)
-	return writeHeaders(&w.buff,h)
+	maps.Copy(w.headers, h)
+	return writeHeaders(&w.buff, h)
 }
 
 func getStatusMessage(statusCode StatusCode) string {
