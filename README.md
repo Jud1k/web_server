@@ -28,22 +28,29 @@ The port number argument is optional. If not provided, the server defaults to po
 Once running, access the server at: http://localhost:8000
 
 ## Available Routes
+```bash
 /
+```
 Welcome message with a simple text response.
-
+```bash
 /html-wrong
+```
 HTML response with a 400 Bad Request status code and humorous error message.
-
+```bash
 /html-server
+```
 HTML response with a 500 Internal Server Error status code.
-
+```bash
 /html-ok
+```
 HTML response with a 200 OK status code and sample content.
-
+```bash
 /httpbin
+```
 Proxies requests to https://httpbin.org using chunked transfer encoding. This endpoint demonstrates streaming responses and trailer headers with X-Content-SHA256 and X-Content-Length.
 
 Example: GET /httpbin/stream/5 streams 5 JSON responses from httpbin.org.
-
+```bash
 /video
+```
 Streams a sample video file with proper chunked encoding, simulating a video streaming endpoint.
