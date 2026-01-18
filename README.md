@@ -1,5 +1,5 @@
 # TCP to HTTP Server
-A minimal HTTP/1.1 server built from the ground up using raw TCP sockets in Go. This project was developed as part of the "From TCP to HTTP" course on boot.dev, focusing on understanding the fundamental protocols that power the web.
+A minimal HTTP/1.1 server built from the ground up using raw TCP sockets in Go. This project was developed as part of the ["From TCP to HTTP"](https://www.boot.dev/courses/learn-http-protocol-golang) course on boot.dev, focusing on understanding the fundamental protocols that power the web.
 
 ## Features
 Pure TCP implementation: No net/http package for core HTTP handling
