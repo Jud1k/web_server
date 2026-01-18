@@ -54,3 +54,5 @@ Example: GET /httpbin/stream/5 streams 5 JSON responses from httpbin.org.
 /video
 ```
 Streams a sample video file with proper chunked encoding, simulating a video streaming endpoint.
+
+Need create dir assets and put .mp4 file in.
