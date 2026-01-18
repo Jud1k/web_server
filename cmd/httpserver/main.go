@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -17,11 +18,19 @@ import (
 	"github.com/Jud1k/web_server/internal/server"
 )
 
-const port = 42069
-
 func handler(w *response.Writer, req *request.Request) {
 	log.Println(string(req.Body))
 	h := response.GetDefaultHeaders(0)
+	if strings.HasPrefix(req.RequestLine.RequestTarget, "/") {
+		data := []byte(`Hello, its my implementation HTTP-server from The Mister "I worked in Netflix btw" in boot.dev.
+I realy enjoy do this project. I think go is a awesome language and everyone should try it.
+so if you read this and do not try programming in go, GO do it.`)
+		h.Set("Content-Length", fmt.Sprint(len(data)))
+		h.Set("Content-Type", "text/plain")
+		w.WriteStatusLine(400)
+		w.WriteHeaders(h)
+		w.WriteBody(data)
+	}
 	if strings.HasPrefix(req.RequestLine.RequestTarget, "/html-wrong") {
 		data := []byte(`<html><head><title>400 Bad Request</title></head><body><h1>Bad Request</h1><p>Your request honestly kinda sucked.</p></body></html>`)
 		h.Set("Content-Length", fmt.Sprint(len(data)))
@@ -46,7 +55,7 @@ func handler(w *response.Writer, req *request.Request) {
 		w.WriteHeaders(h)
 		w.WriteBody(data)
 	}
-	if strings.HasPrefix(req.RequestLine.RequestTarget, "/httpbin/") {
+	if strings.HasPrefix(req.RequestLine.RequestTarget, "/httpbin") {
 		newTarget := fmt.Sprintf("https://httpbin.org%s", strings.TrimPrefix(req.RequestLine.RequestTarget, "/httpbin"))
 		resp, err := http.Get(newTarget)
 		if err != nil {
@@ -85,14 +94,14 @@ func handler(w *response.Writer, req *request.Request) {
 		trailers.Set("X-Content-Length", fmt.Sprint(len(fullBody)))
 		w.WriteTrailers(trailers)
 	}
-	if strings.HasPrefix(req.RequestLine.RequestTarget,"/video"){
+	if strings.HasPrefix(req.RequestLine.RequestTarget, "/video") {
 		fileName := "./assets/vim.mp4"
-		video,err:=os.ReadFile(fileName)
-		if err!=nil{
-			log.Fatalf("error: cannot read file with name %s",fileName)
+		video, err := os.ReadFile(fileName)
+		if err != nil {
+			log.Fatalf("error: cannot read file with name %s", fileName)
 		}
-		h.Set("Content-Type","video/mp4")
-		h.Set("Content-Length",fmt.Sprint(len(video)))
+		h.Set("Content-Type", "video/mp4")
+		h.Set("Content-Length", fmt.Sprint(len(video)))
 		w.WriteStatusLine(200)
 		w.WriteHeaders(h)
 		w.WriteBody(video)
@@ -100,6 +109,14 @@ func handler(w *response.Writer, req *request.Request) {
 }
 
 func main() {
+	port := 8000
+	if len(os.Args) > 1 {
+		arg, err := strconv.Atoi(os.Args[1])
+		if err != nil {
+			log.Fatal(err)
+		}
+		port = arg
+	}
 	server, err := server.Serve(port, handler)
 	if err != nil {
 		log.Fatalf("Error starting server: %v", err)
